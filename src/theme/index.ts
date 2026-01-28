@@ -1,0 +1,55 @@
+export const colors = {
+  primary: '#4F46E5',
+  primaryLight: '#EEF2FF',
+  primaryDark: '#3730A3',
+  background: '#F8FAFC',
+  surface: '#FFFFFF',
+  surfaceSecondary: '#F1F5F9',
+  text: '#1E293B',
+  textSecondary: '#64748B',
+  textTertiary: '#94A3B8',
+  border: '#E2E8F0',
+  error: '#EF4444',
+  errorLight: '#FEF2F2',
+  success: '#10B981',
+  successLight: '#ECFDF5',
+  warning: '#F59E0B',
+  white: '#FFFFFF',
+  overlay: 'rgba(0, 0, 0, 0.5)',
+};
+
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+};
+
+export const borderRadius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  full: 999,
+};
+
+export const typography = {
+  h1: {fontSize: 28, fontWeight: '700' as const, lineHeight: 34},
+  h2: {fontSize: 22, fontWeight: '700' as const, lineHeight: 28},
+  h3: {fontSize: 18, fontWeight: '600' as const, lineHeight: 24},
+  body: {fontSize: 16, fontWeight: '400' as const, lineHeight: 22},
+  bodyBold: {fontSize: 16, fontWeight: '600' as const, lineHeight: 22},
+  caption: {fontSize: 14, fontWeight: '400' as const, lineHeight: 20},
+  captionBold: {fontSize: 14, fontWeight: '600' as const, lineHeight: 20},
+  small: {fontSize: 12, fontWeight: '400' as const, lineHeight: 16},
+};
+
+export const shadow = {
+  shadowColor: '#000',
+  shadowOffset: {width: 0, height: 2},
+  shadowOpacity: 0.08,
+  shadowRadius: 8,
+  elevation: 3,
+};
