@@ -1,20 +1,31 @@
-export type WorkoutType = 'cardio' | 'strength' | 'yoga' | 'hiit' | 'mobility';
+export type WorkoutType =
+  | 'cardio'
+  | 'strength'
+  | 'yoga'
+  | 'hiit'
+  | 'stretching'
+  | 'sports';
 
 export interface WorkoutTypeInfo {
   id: WorkoutType;
   label: string;
   icon: string;
-  color: string;
   description: string;
+  gradientStart: string;
+  gradientEnd: string;
+  suggestedExercises: string[];
+}
+
+export interface ExerciseSet {
+  weight: number;
+  reps: number;
+  completed: boolean;
 }
 
 export interface Exercise {
   id: string;
   name: string;
-  sets: number;
-  reps: number;
-  weight?: number;
-  duration?: number;
+  sets: ExerciseSet[];
 }
 
 export interface Workout {
@@ -22,4 +33,5 @@ export interface Workout {
   type: WorkoutType;
   exercises: Exercise[];
   completedAt: string;
+  duration: number; // in seconds
 }

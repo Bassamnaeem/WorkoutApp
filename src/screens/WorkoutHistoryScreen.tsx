@@ -1,15 +1,13 @@
 import React from 'react';
 import {FlatList, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {Button} from '../components/Button';
-import {Card} from '../components/Card';
 import {EmptyState} from '../components/EmptyState';
 import {useWorkoutContext} from '../context/WorkoutContext';
 import {getWorkoutTypeInfo} from '../data/workoutTypes';
 import type {WorkoutHistoryScreenProps} from '../navigation/types';
-import {colors, spacing, typography} from '../theme';
+import {borderRadius, colors, shadow, spacing, typography} from '../theme';
 import type {Workout} from '../types';
-import {formatDateTime} from '../utils/formatting';
+import {formatDateTime, formatTime} from '../utils/formatting';
 
 export function WorkoutHistoryScreen({
   navigation,
@@ -19,35 +17,59 @@ export function WorkoutHistoryScreen({
 
   const renderWorkout = ({item}: {item: Workout}) => {
     const typeInfo = getWorkoutTypeInfo(item.type);
-    const exerciseNames = item.exercises.map(e => e.name).join(', ');
+    const totalSets = item.exercises.reduce((sum, e) => sum + e.sets.length, 0);
+    const completedSets = item.exercises.reduce(
+      (sum, e) => sum + e.sets.filter(s => s.completed).length,
+      0,
+    );
+    const estimatedCalories = Math.round(item.duration / 60 * 5);
 
     return (
-      <Card style={styles.card}>
+      <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View
             style={[
               styles.iconContainer,
-              {backgroundColor: typeInfo.color + '15'},
+              {backgroundColor: typeInfo.gradientStart + '20'},
             ]}>
             <Text style={styles.icon}>{typeInfo.icon}</Text>
           </View>
           <View style={styles.cardInfo}>
             <Text style={styles.cardType}>{typeInfo.label}</Text>
-            <Text style={styles.cardDate}>
-              {formatDateTime(item.completedAt)}
-            </Text>
-          </View>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {item.exercises.length}{' '}
-              {item.exercises.length === 1 ? 'ex.' : 'ex.'}
-            </Text>
+            <Text style={styles.cardDate}>{formatDateTime(item.completedAt)}</Text>
           </View>
         </View>
-        <Text style={styles.exerciseList} numberOfLines={2}>
-          {exerciseNames}
-        </Text>
-      </Card>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statIcon}>⏱️</Text>
+            <Text style={styles.statText}>{formatTime(item.duration)}</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statIcon}>🔢</Text>
+            <Text style={styles.statText}>
+              {completedSets}/{totalSets} sets
+            </Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statIcon}>🔥</Text>
+            <Text style={styles.statText}>{estimatedCalories} cal</Text>
+          </View>
+        </View>
+
+        <View style={styles.exerciseTags}>
+          {item.exercises.slice(0, 3).map(exercise => (
+            <View key={exercise.id} style={styles.exerciseTag}>
+              <Text style={styles.exerciseTagText}>{exercise.name}</Text>
+            </View>
+          ))}
+          {item.exercises.length > 3 && (
+            <Text style={styles.moreExercises}>
+              +{item.exercises.length - 3} more
+            </Text>
+          )}
+        </View>
+      </View>
     );
   };
 
@@ -62,9 +84,17 @@ export function WorkoutHistoryScreen({
           history.length === 0 && styles.emptyList,
           {paddingBottom: insets.bottom + spacing.lg},
         ]}
+        ListHeaderComponent={
+          history.length > 0 ? (
+            <Text style={styles.countText}>
+              {history.length} {history.length === 1 ? 'workout' : 'workouts'}{' '}
+              logged
+            </Text>
+          ) : null
+        }
         ListEmptyComponent={
           <EmptyState
-            icon={'\u{1F4CB}'}
+            icon="📋"
             title="No Workouts Yet"
             message="Your completed workouts will show up here. Start your first workout to begin tracking your progress."
             actionLabel="Start a Workout"
@@ -72,16 +102,6 @@ export function WorkoutHistoryScreen({
           />
         }
         showsVerticalScrollIndicator={false}
-        ListFooterComponent={
-          history.length > 0 ? (
-            <Button
-              title="Start New Workout"
-              onPress={() => navigation.navigate('WorkoutSelection')}
-              variant="secondary"
-              style={styles.footerButton}
-            />
-          ) : null
-        }
       />
     </View>
   );
@@ -100,24 +120,33 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
   },
-  card: {
+  countText: {
+    ...typography.caption,
+    color: colors.textSecondary,
     marginBottom: spacing.md,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
   },
   icon: {
-    fontSize: 20,
+    fontSize: 22,
   },
   cardInfo: {
     flex: 1,
@@ -129,25 +158,47 @@ const styles = StyleSheet.create({
   cardDate: {
     ...typography.small,
     color: colors.textSecondary,
-    marginTop: 1,
+    marginTop: 2,
   },
-  badge: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 20,
-    paddingHorizontal: spacing.sm + 2,
+  statsRow: {
+    flexDirection: 'row',
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: spacing.lg,
+  },
+  statIcon: {
+    fontSize: 14,
+    marginRight: spacing.xs,
+  },
+  statText: {
+    ...typography.small,
+    color: colors.textSecondary,
+  },
+  exerciseTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingTop: spacing.md,
+    gap: spacing.xs,
+  },
+  exerciseTag: {
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  badgeText: {
+  exerciseTagText: {
     ...typography.small,
-    color: colors.primary,
-    fontWeight: '600',
+    color: colors.text,
   },
-  exerciseList: {
-    ...typography.caption,
+  moreExercises: {
+    ...typography.small,
     color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  footerButton: {
-    marginTop: spacing.sm,
+    alignSelf: 'center',
+    marginLeft: spacing.xs,
   },
 });

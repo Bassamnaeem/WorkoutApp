@@ -1,112 +1,126 @@
-import React, {useState} from 'react';
-import {FlatList, StyleSheet, Text, View} from 'react-native';
+import React from 'react';
+import {ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {Button} from '../components/Button';
-import {EmptyState} from '../components/EmptyState';
-import {WorkoutTypeCard} from '../components/WorkoutTypeCard';
 import {WORKOUT_TYPES} from '../data/workoutTypes';
 import type {WorkoutSelectionScreenProps} from '../navigation/types';
-import {colors, spacing, typography} from '../theme';
-import type {WorkoutType, WorkoutTypeInfo} from '../types';
+import type {WorkoutTypeInfo} from '../types';
 
 export function WorkoutSelectionScreen({
   navigation,
 }: WorkoutSelectionScreenProps) {
   const insets = useSafeAreaInsets();
-  const [selectedType, setSelectedType] = useState<WorkoutType | null>(null);
-  const [types] = useState<WorkoutTypeInfo[]>(WORKOUT_TYPES);
 
-  const handleStart = () => {
-    if (selectedType) {
-      navigation.navigate('ExerciseLogging', {workoutType: selectedType});
-    }
+  const handleSelectWorkout = (workoutType: WorkoutTypeInfo) => {
+    navigation.navigate('ExerciseLogging', {workoutType: workoutType.id});
   };
 
-  if (types.length === 0) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <EmptyState
-          icon={'\u{1F50D}'}
-          title="No Workouts Available"
-          message="We couldn't load workout types. Please try again."
-          actionLabel="Retry"
-          onAction={() => {}}
-        />
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={types}
-        keyExtractor={item => item.id}
-        renderItem={({item}) => (
-          <WorkoutTypeCard
-            workoutType={item}
-            selected={selectedType === item.id}
-            onPress={() => setSelectedType(item.id)}
-          />
-        )}
-        contentContainerStyle={[
-          styles.list,
-          {paddingBottom: insets.bottom + 100},
-        ]}
-        ListHeaderComponent={
-          <Text style={styles.prompt}>
-            What are you training today?
-          </Text>
-        }
-        showsVerticalScrollIndicator={false}
-      />
-      <View
-        style={[styles.footer, {paddingBottom: insets.bottom + spacing.md}]}>
-        <Button
-          title="Start Workout"
-          onPress={handleStart}
-          disabled={!selectedType}
-        />
-        {!selectedType && (
-          <Text style={styles.hint}>Select a workout type to continue</Text>
-        )}
-      </View>
-    </View>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[
+        styles.content,
+        {paddingBottom: insets.bottom + 24},
+      ]}
+      showsVerticalScrollIndicator={false}>
+      {WORKOUT_TYPES.map(workoutType => (
+        <TouchableOpacity
+          key={workoutType.id}
+          activeOpacity={0.85}
+          onPress={() => handleSelectWorkout(workoutType)}
+          style={styles.cardWrapper}>
+          <LinearGradient
+            colors={[workoutType.gradientStart, workoutType.gradientEnd]}
+            start={{x: 0, y: 0}}
+            end={{x: 1, y: 1}}
+            style={styles.card}>
+            {/* Decorative circle */}
+            <View
+              style={[
+                styles.decorativeCircle,
+                {backgroundColor: 'rgba(255, 255, 255, 0.15)'},
+              ]}
+            />
+
+            {/* Content */}
+            <View style={styles.cardContent}>
+              <Text style={styles.emoji}>{workoutType.icon}</Text>
+              <Text style={styles.title}>{workoutType.label}</Text>
+              <Text style={styles.subtitle}>{workoutType.description}</Text>
+              <View style={styles.cta}>
+                <Text style={styles.ctaText}>Start workout</Text>
+                <Text style={styles.ctaArrow}>→</Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F8FAFC',
   },
-  centered: {
-    justifyContent: 'center',
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
+  },
+  cardWrapper: {
+    marginBottom: 12,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  card: {
+    minHeight: 130,
+    position: 'relative',
+  },
+  decorativeCircle: {
+    position: 'absolute',
+    right: -30,
+    top: '50%',
+    marginTop: -60,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+  },
+  cardContent: {
+    padding: 18,
+    paddingBottom: 16,
+  },
+  emoji: {
+    fontSize: 28,
+    lineHeight: 34,
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    lineHeight: 22,
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  cta: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  list: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+  ctaText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    marginRight: 4,
   },
-  prompt: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  hint: {
-    ...typography.small,
-    color: colors.textTertiary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
+  ctaArrow: {
+    fontSize: 14,
+    color: '#FFFFFF',
   },
 });

@@ -1,91 +1,145 @@
 import React from 'react';
-import {ScrollView, StyleSheet, Text, View} from 'react-native';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {Button} from '../components/Button';
-import {Card} from '../components/Card';
 import {useWorkoutContext} from '../context/WorkoutContext';
 import {getWorkoutTypeInfo} from '../data/workoutTypes';
 import type {HomeScreenProps} from '../navigation/types';
-import {colors, spacing, typography} from '../theme';
-import {formatDateTime} from '../utils/formatting';
+import {borderRadius, colors, shadow, spacing, typography} from '../theme';
+import {formatTime} from '../utils/formatting';
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) {
+    return 'Good Morning!';
+  }
+  if (hour < 17) {
+    return 'Good Afternoon!';
+  }
+  return 'Good Evening!';
+}
 
 export function HomeScreen({navigation}: HomeScreenProps) {
   const insets = useSafeAreaInsets();
-  const {lastWorkout, totalWorkouts, totalExercises} = useWorkoutContext();
+  const {totalWorkouts, totalDuration, totalCalories, history} =
+    useWorkoutContext();
 
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={[
         styles.content,
-        {paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg},
+        {
+          paddingTop: insets.top + spacing.xl,
+          paddingBottom: insets.bottom + spacing.lg,
+        },
       ]}
       showsVerticalScrollIndicator={false}>
-      <Text style={styles.greeting}>Ready to train?</Text>
-      <Text style={styles.subtitle}>
-        {totalWorkouts > 0
-          ? "Keep the momentum going."
-          : 'Start your first workout today.'}
-      </Text>
+      {/* Header */}
+      <Text style={styles.greeting}>{getGreeting()}</Text>
+      <Text style={styles.subtitle}>Ready to crush your workout?</Text>
 
-      {totalWorkouts > 0 && (
-        <Card style={styles.statsCard}>
-          <Text style={styles.statsTitle}>Your Stats</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statNumber}>{totalWorkouts}</Text>
-              <Text style={styles.statLabel}>
-                {totalWorkouts === 1 ? 'Workout' : 'Workouts'}
-              </Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.stat}>
-              <Text style={styles.statNumber}>{totalExercises}</Text>
-              <Text style={styles.statLabel}>
-                {totalExercises === 1 ? 'Exercise' : 'Exercises'}
-              </Text>
-            </View>
-          </View>
-        </Card>
-      )}
-
-      {lastWorkout && (
-        <Card style={styles.lastWorkoutCard}>
-          <Text style={styles.lastWorkoutLabel}>Last Workout</Text>
-          <View style={styles.lastWorkoutHeader}>
-            <Text style={styles.lastWorkoutIcon}>
-              {getWorkoutTypeInfo(lastWorkout.type).icon}
-            </Text>
-            <View style={styles.lastWorkoutInfo}>
-              <Text style={styles.lastWorkoutType}>
-                {getWorkoutTypeInfo(lastWorkout.type).label}
-              </Text>
-              <Text style={styles.lastWorkoutDate}>
-                {formatDateTime(lastWorkout.completedAt)}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.lastWorkoutExercises}>
-            {lastWorkout.exercises.length}{' '}
-            {lastWorkout.exercises.length === 1 ? 'exercise' : 'exercises'}{' '}
-            logged
-          </Text>
-        </Card>
-      )}
-
-      <View style={styles.actions}>
-        <Button
-          title="Start Workout"
-          onPress={() => navigation.navigate('WorkoutSelection')}
+      {/* Start Workout Card */}
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => navigation.navigate('WorkoutSelection')}
+        style={styles.startCard}>
+        <LinearGradient
+          colors={['#F97316', '#EA580C']}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={StyleSheet.absoluteFill}
         />
-        {totalWorkouts > 0 && (
-          <Button
-            title="View History"
-            onPress={() => navigation.navigate('WorkoutHistory')}
-            variant="outline"
-          />
-        )}
+        <Text style={styles.startCardTitle}>Start a Workout</Text>
+        <Text style={styles.startCardSubtitle}>
+          Choose from cardio, strength, yoga & more
+        </Text>
+        <View style={styles.newWorkoutButton}>
+          <Text style={styles.newWorkoutButtonIcon}>+</Text>
+          <Text style={styles.newWorkoutButtonText}>New Workout</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* This Week Stats */}
+      <Text style={styles.sectionTitle}>This Week</Text>
+      <View style={styles.statsRow}>
+        <View style={styles.statCard}>
+          <Text style={styles.statIcon}>🏋️</Text>
+          <Text style={styles.statNumber}>{totalWorkouts}</Text>
+          <Text style={styles.statLabel}>Workouts</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statIcon}>📈</Text>
+          <Text style={styles.statNumber}>{formatTime(totalDuration)}</Text>
+          <Text style={styles.statLabel}>Duration</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statIcon}>🔥</Text>
+          <Text style={styles.statNumber}>{totalCalories}</Text>
+          <Text style={styles.statLabel}>Calories</Text>
+        </View>
       </View>
+
+      {/* Recent Workouts */}
+      <Text style={styles.sectionTitle}>Recent Workouts</Text>
+      {history.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyIcon}>🏋️</Text>
+          <Text style={styles.emptyTitle}>No workouts yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Start your first workout to see it here!
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.recentList}>
+          {history.slice(0, 3).map(workout => {
+            const typeInfo = getWorkoutTypeInfo(workout.type);
+            const totalSets = workout.exercises.reduce(
+              (sum, e) => sum + e.sets.length,
+              0,
+            );
+            const completedSets = workout.exercises.reduce(
+              (sum, e) => sum + e.sets.filter(s => s.completed).length,
+              0,
+            );
+
+            return (
+              <TouchableOpacity
+                key={workout.id}
+                style={styles.recentCard}
+                onPress={() => navigation.navigate('WorkoutHistory')}>
+                <View
+                  style={[
+                    styles.recentIconContainer,
+                    {backgroundColor: typeInfo.gradientStart + '20'},
+                  ]}>
+                  <Text style={styles.recentIcon}>{typeInfo.icon}</Text>
+                </View>
+                <View style={styles.recentInfo}>
+                  <Text style={styles.recentType}>{typeInfo.label}</Text>
+                  <Text style={styles.recentMeta}>
+                    {completedSets}/{totalSets} sets · {formatTime(workout.duration)}
+                  </Text>
+                </View>
+                <Text style={styles.chevron}>›</Text>
+              </TouchableOpacity>
+            );
+          })}
+          {history.length > 3 && (
+            <TouchableOpacity
+              style={styles.viewAllButton}
+              onPress={() => navigation.navigate('WorkoutHistory')}>
+              <Text style={styles.viewAllText}>View All History</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -108,74 +162,142 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     marginBottom: spacing.lg,
   },
-  statsCard: {
+  startCard: {
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    overflow: 'hidden',
+  },
+  startCardTitle: {
+    ...typography.h2,
+    color: colors.white,
+    marginBottom: spacing.xs,
+  },
+  startCardSubtitle: {
+    ...typography.caption,
+    color: 'rgba(255, 255, 255, 0.85)',
     marginBottom: spacing.md,
   },
-  statsTitle: {
+  newWorkoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.full,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
+  },
+  newWorkoutButtonIcon: {
+    fontSize: 18,
+    color: colors.primary,
+    marginRight: spacing.xs,
+    fontWeight: '600',
+  },
+  newWorkoutButtonText: {
     ...typography.captionBold,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    color: colors.primary,
+  },
+  sectionTitle: {
+    ...typography.bodyBold,
+    color: colors.text,
     marginBottom: spacing.md,
+    marginTop: spacing.sm,
   },
   statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
-  stat: {
+  statCard: {
     flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
     alignItems: 'center',
+    ...shadow,
+  },
+  statIcon: {
+    fontSize: 24,
+    marginBottom: spacing.xs,
   },
   statNumber: {
-    ...typography.h1,
-    color: colors.primary,
+    ...typography.h2,
+    color: colors.text,
   },
   statLabel: {
-    ...typography.caption,
+    ...typography.small,
     color: colors.textSecondary,
     marginTop: 2,
   },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: colors.border,
+  emptyCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xl,
+    alignItems: 'center',
+    ...shadow,
   },
-  lastWorkoutCard: {
-    marginBottom: spacing.lg,
-  },
-  lastWorkoutLabel: {
-    ...typography.captionBold,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  emptyIcon: {
+    fontSize: 48,
     marginBottom: spacing.md,
   },
-  lastWorkoutHeader: {
+  emptyTitle: {
+    ...typography.bodyBold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  emptySubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  recentList: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    ...shadow,
+    overflow: 'hidden',
+  },
+  recentCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
-  lastWorkoutIcon: {
-    fontSize: 32,
+  recentIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: spacing.md,
   },
-  lastWorkoutInfo: {
+  recentIcon: {
+    fontSize: 22,
+  },
+  recentInfo: {
     flex: 1,
   },
-  lastWorkoutType: {
+  recentType: {
     ...typography.bodyBold,
     color: colors.text,
   },
-  lastWorkoutDate: {
-    ...typography.caption,
+  recentMeta: {
+    ...typography.small,
     color: colors.textSecondary,
     marginTop: 2,
   },
-  lastWorkoutExercises: {
-    ...typography.caption,
-    color: colors.textSecondary,
+  chevron: {
+    fontSize: 24,
+    color: colors.textTertiary,
+    marginLeft: spacing.sm,
   },
-  actions: {
-    gap: spacing.md,
+  viewAllButton: {
+    padding: spacing.md,
+    alignItems: 'center',
+  },
+  viewAllText: {
+    ...typography.captionBold,
+    color: colors.primary,
   },
 });

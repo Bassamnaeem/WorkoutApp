@@ -1,15 +1,12 @@
 import {CommonActions} from '@react-navigation/native';
-import React, {useState} from 'react';
-import {Alert, FlatList, StyleSheet, Text, View} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {Button} from '../components/Button';
-import {Card} from '../components/Card';
 import {useWorkoutContext} from '../context/WorkoutContext';
 import {getWorkoutTypeInfo} from '../data/workoutTypes';
 import type {WorkoutSummaryScreenProps} from '../navigation/types';
-import {colors, spacing, typography} from '../theme';
-import type {Exercise} from '../types';
-import {formatDateTime} from '../utils/formatting';
+import {borderRadius, colors, shadow, spacing, typography} from '../theme';
+import {formatTime} from '../utils/formatting';
 
 export function WorkoutSummaryScreen({
   route,
@@ -21,6 +18,27 @@ export function WorkoutSummaryScreen({
   const typeInfo = getWorkoutTypeInfo(workout.type);
 
   const [saved, setSaved] = useState(false);
+
+  // Calculate stats
+  const totalSets = workout.exercises.reduce((sum, e) => sum + e.sets.length, 0);
+  const completedSets = workout.exercises.reduce(
+    (sum, e) => sum + e.sets.filter(s => s.completed).length,
+    0,
+  );
+  const totalVolume = workout.exercises.reduce(
+    (sum, e) =>
+      sum + e.sets.reduce((setSum, s) => setSum + s.weight * s.reps, 0),
+    0,
+  );
+  const estimatedCalories = Math.round(workout.duration / 60 * 5);
+
+  // Configure header
+  useEffect(() => {
+    navigation.setOptions({
+      headerShown: true,
+      title: 'Workout Summary',
+    });
+  }, [navigation]);
 
   const handleSave = () => {
     saveWorkout(workout);
@@ -35,108 +53,105 @@ export function WorkoutSummaryScreen({
   const handleShare = () => {
     const exerciseList = workout.exercises
       .map(e => {
-        let detail = `${e.sets}x${e.reps}`;
-        if (e.weight) {
-          detail += ` @ ${e.weight}kg`;
-        }
-        return `- ${e.name}: ${detail}`;
+        const setsInfo = e.sets
+          .map((s, i) => `Set ${i + 1}: ${s.weight}kg x ${s.reps}`)
+          .join('\n');
+        return `${e.name}\n${setsInfo}`;
       })
-      .join('\n');
+      .join('\n\n');
 
     Alert.alert(
       'Share Workout',
-      `${typeInfo.icon} ${typeInfo.label} Workout\n${formatDateTime(workout.completedAt)}\n\n${exerciseList}\n\nLogged with WorkoutApp`,
-    );
-  };
-
-  const renderExercise = ({item}: {item: Exercise}) => {
-    const details: string[] = [
-      `${item.sets} ${item.sets === 1 ? 'set' : 'sets'} \u00D7 ${item.reps} ${item.reps === 1 ? 'rep' : 'reps'}`,
-    ];
-    if (item.weight) {
-      details.push(`${item.weight} kg`);
-    }
-    if (item.duration) {
-      details.push(`${item.duration} min`);
-    }
-
-    return (
-      <Card style={styles.exerciseCard} variant="outlined">
-        <Text style={styles.exerciseName}>{item.name}</Text>
-        <Text style={styles.exerciseDetails}>{details.join('  \u00B7  ')}</Text>
-      </Card>
+      `${typeInfo.icon} ${typeInfo.label} Workout\n\nDuration: ${formatTime(workout.duration)}\nSets: ${completedSets}/${totalSets}\nCalories: ~${estimatedCalories}\nVolume: ${totalVolume}kg\n\n${exerciseList}\n\nLogged with WorkoutApp`,
     );
   };
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={workout.exercises}
-        keyExtractor={item => item.id}
-        renderItem={renderExercise}
-        contentContainerStyle={[
-          styles.list,
-          {paddingBottom: insets.bottom + 140},
-        ]}
-        ListHeaderComponent={
-          <View>
-            <View style={styles.header}>
-              <Text style={styles.successIcon}>
-                {'\u{1F389}'}
-              </Text>
-              <Text style={styles.title}>Workout Complete!</Text>
-            </View>
-
-            <Card style={styles.summaryCard}>
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryIcon}>{typeInfo.icon}</Text>
-                <View style={styles.summaryInfo}>
-                  <Text style={styles.summaryType}>{typeInfo.label}</Text>
-                  <Text style={styles.summaryDate}>
-                    {formatDateTime(workout.completedAt)}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.summaryStats}>
-                <View style={styles.summaryStat}>
-                  <Text style={styles.summaryStatNumber}>
-                    {workout.exercises.length}
-                  </Text>
-                  <Text style={styles.summaryStatLabel}>
-                    {workout.exercises.length === 1 ? 'Exercise' : 'Exercises'}
-                  </Text>
-                </View>
-                <View style={styles.summaryStat}>
-                  <Text style={styles.summaryStatNumber}>
-                    {workout.exercises.reduce((sum, e) => sum + e.sets, 0)}
-                  </Text>
-                  <Text style={styles.summaryStatLabel}>Total Sets</Text>
-                </View>
-              </View>
-            </Card>
-
-            <Text style={styles.sectionTitle}>Exercises</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[
+        styles.content,
+        {paddingBottom: insets.bottom + spacing.lg},
+      ]}
+      showsVerticalScrollIndicator={false}>
+      {/* Trophy Section */}
+      <View style={styles.trophySection}>
+        <View style={styles.trophyContainer}>
+          <Text style={styles.trophyIcon}>🏆</Text>
+          <View style={styles.checkBadge}>
+            <Text style={styles.checkBadgeIcon}>✓</Text>
           </View>
-        }
-        showsVerticalScrollIndicator={false}
-      />
-
-      <View
-        style={[styles.footer, {paddingBottom: insets.bottom + spacing.md}]}>
-        <Button
-          title={saved ? '\u2713  Saved!' : 'Save Workout'}
-          onPress={handleSave}
-          disabled={saved}
-          style={saved ? styles.savedButton : undefined}
-        />
-        <Button
-          title="Share Workout"
-          onPress={handleShare}
-          variant="outline"
-          disabled={saved}
-        />
+        </View>
+        <Text style={styles.greatWorkTitle}>Great Work!</Text>
+        <Text style={styles.completedSubtitle}>
+          You've completed your {typeInfo.label} workout
+        </Text>
       </View>
-    </View>
+
+      {/* Stats Grid */}
+      <View style={styles.statsGrid}>
+        <View style={styles.statCard}>
+          <Text style={styles.statIcon}>⏱️</Text>
+          <Text style={styles.statValue}>{formatTime(workout.duration)}</Text>
+          <Text style={styles.statLabel}>Duration</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statIcon}>🔢</Text>
+          <Text style={styles.statValue}>
+            {completedSets}/{totalSets}
+          </Text>
+          <Text style={styles.statLabel}>Sets</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statIcon}>🔥</Text>
+          <Text style={styles.statValue}>~{estimatedCalories}</Text>
+          <Text style={styles.statLabel}>Calories</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statIcon}>🏋️</Text>
+          <Text style={styles.statValue}>{totalVolume}kg</Text>
+          <Text style={styles.statLabel}>Volume</Text>
+        </View>
+      </View>
+
+      {/* Exercises Section */}
+      <Text style={styles.exercisesTitle}>Exercises</Text>
+      {workout.exercises.map(exercise => {
+        const exerciseSets = exercise.sets.length;
+        const exerciseCompleted = exercise.sets.filter(s => s.completed).length;
+        return (
+          <TouchableOpacity key={exercise.id} style={styles.exerciseCard}>
+            <View style={styles.exerciseInfo}>
+              <Text style={styles.exerciseName}>{exercise.name}</Text>
+              <Text style={styles.exerciseMeta}>
+                {exerciseCompleted}/{exerciseSets} sets completed
+              </Text>
+            </View>
+            <Text style={styles.exerciseChevron}>›</Text>
+          </TouchableOpacity>
+        );
+      })}
+
+      {/* Action Buttons */}
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={[styles.saveButton, saved && styles.savedButton]}
+          onPress={handleSave}
+          disabled={saved}>
+          <Text style={styles.saveIcon}>✓</Text>
+          <Text style={styles.saveText}>
+            {saved ? 'Saved!' : 'Save Workout'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.shareButton}
+          onPress={handleShare}
+          disabled={saved}>
+          <Text style={styles.shareIcon}>📤</Text>
+          <Text style={styles.shareText}>Share</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -145,94 +160,145 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  list: {
-    paddingHorizontal: spacing.lg,
+  content: {
+    padding: spacing.lg,
   },
-  header: {
+  trophySection: {
     alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  successIcon: {
-    fontSize: 48,
-    marginBottom: spacing.sm,
-  },
-  title: {
-    ...typography.h2,
-    color: colors.text,
-  },
-  summaryCard: {
     marginBottom: spacing.lg,
   },
-  summaryRow: {
-    flexDirection: 'row',
+  trophyContainer: {
+    position: 'relative',
+    width: 80,
+    height: 80,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.xl,
     marginBottom: spacing.md,
   },
-  summaryIcon: {
-    fontSize: 36,
-    marginRight: spacing.md,
+  trophyIcon: {
+    fontSize: 40,
   },
-  summaryInfo: {
+  checkBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBadgeIcon: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  greatWorkTitle: {
+    ...typography.h2,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  completedSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  statCard: {
     flex: 1,
+    minWidth: '45%',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    alignItems: 'center',
+    ...shadow,
   },
-  summaryType: {
-    ...typography.h3,
+  statIcon: {
+    fontSize: 20,
+    marginBottom: spacing.xs,
+  },
+  statValue: {
+    ...typography.h2,
     color: colors.text,
   },
-  summaryDate: {
-    ...typography.caption,
+  statLabel: {
+    ...typography.small,
     color: colors.textSecondary,
     marginTop: 2,
   },
-  summaryStats: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: spacing.md,
-  },
-  summaryStat: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  summaryStatNumber: {
-    ...typography.h2,
-    color: colors.primary,
-  },
-  summaryStatLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  sectionTitle: {
-    ...typography.h3,
+  exercisesTitle: {
+    ...typography.bodyBold,
     color: colors.text,
     marginBottom: spacing.md,
   },
   exerciseCard: {
-    marginBottom: spacing.sm + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    ...shadow,
+  },
+  exerciseInfo: {
+    flex: 1,
   },
   exerciseName: {
     ...typography.bodyBold,
     color: colors.text,
   },
-  exerciseDetails: {
-    ...typography.caption,
+  exerciseMeta: {
+    ...typography.small,
     color: colors.textSecondary,
-    marginTop: spacing.xs,
+    marginTop: 2,
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: spacing.sm,
+  exerciseChevron: {
+    fontSize: 24,
+    color: colors.textTertiary,
+  },
+  actions: {
+    marginTop: spacing.lg,
+    gap: spacing.md,
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md + 2,
   },
   savedButton: {
     backgroundColor: colors.success,
+  },
+  saveIcon: {
+    fontSize: 18,
+    color: colors.white,
+    marginRight: spacing.sm,
+  },
+  saveText: {
+    ...typography.bodyBold,
+    color: colors.white,
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+  },
+  shareIcon: {
+    fontSize: 16,
+    marginRight: spacing.xs,
+  },
+  shareText: {
+    ...typography.captionBold,
+    color: colors.textSecondary,
   },
 });
